@@ -4,6 +4,7 @@ import requests
 import json
 import time
 from typing import Optional
+from .rag import get_rag  # RAG integration for knowledge-enhanced responses
 
 
 class GGUFLLMHost:
@@ -153,6 +154,10 @@ class GGUFLLMHost:
             self._first_server_query_done = True
         
         try:
+            # Retrieve relevant Ayurvedic knowledge using RAG
+            rag = get_rag()
+            augmented_text, retrieved_chunks = rag.augment_query(user_text, top_k=3)
+            
             # Comprehensive system prompt ensuring complete output
             system_prompt = (
                 "You are Vaidya SLM, an expert Ayurvedic assistant with deep knowledge of Ayurveda. "
@@ -180,7 +185,7 @@ class GGUFLLMHost:
             payload = {
                 "messages": [
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Language: {lang}. Symptoms: {user_text}"}
+                    {"role": "user", "content": augmented_text}  # Use RAG-augmented query
                 ],
                 "max_tokens": 1000,
                 "temperature": 0.2,
