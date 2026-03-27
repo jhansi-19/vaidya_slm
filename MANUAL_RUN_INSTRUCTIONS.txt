@@ -1,0 +1,19 @@
+TERMINAL 1 (LLAMA SERVER - REQUIRED)
+cd c:\idea1\tools\llama-cpp-bin
+llama-server.exe -m c:\idea1\vaidya_slm\models\gemma-2-2b-it.Q4_K_M.gguf --host 127.0.0.1 --port 8008 --ctx-size 2048
+
+TERMINAL 2 (BACKEND)
+cd c:\idea1\vaidya_slm\backend
+c:/idea1/.venv/Scripts/python.exe -m uvicorn main:app --host 0.0.0.0 --port 8005
+
+TERMINAL 3 (FRONTEND)
+cd c:\idea1\vaidya_slm\frontend_pro
+python -m http.server 8000
+
+OPEN IN BROWSER
+http://localhost:8000
+
+OPTIONAL BACKEND CHECK
+http://localhost:8005/docs
+http://localhost:8005/
+http://127.0.0.1:8008/health

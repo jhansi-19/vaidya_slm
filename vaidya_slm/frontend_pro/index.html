@@ -1,0 +1,494 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vaidya SLM | Ayurvedic Intelligence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        h1, h2, h3 { font-family: 'Outfit', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.4); }
+        .gradient-text { background: linear-gradient(to right, #065f46, #10b981); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-20px); } 100% { transform: translateY(0px); } }
+        .diagnostic-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .diagnostic-card:hover { transform: translateY(-5px); box-shadow: 0 25px 50px -12px rgba(6, 95, 70, 0.1); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const API_BASE = "http://127.0.0.1:8005";
+
+        // Simple SVG Icons to replace Lucide and avoid DOM conflicts
+        const Icon = ({ name, className = "w-6 h-6" }) => {
+            const icons = {
+                leaf: <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 3.5 1 9.2C17 19 13 20 11 20z"></path><path d="M19 2c-5.5 1.5-11.5 3-15 10"></path></svg>,
+                sparkles: <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path><path d="M5 3v4"></path><path d="M19 17v4"></path><path d="M3 5h4"></path><path d="M17 19h4"></path></svg>,
+                shield: <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg>,
+                zap: <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.71 13.14 3.5a.5.5 0 0 1 .86.46L11 11h7.14a.5.5 0 0 1 .37.83L9.37 20.5a.5.5 0 0 1-.86-.46L11 13H3.86a.5.5 0 0 1-.37-.83Z"></path></svg>,
+                database: <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5V19A9 3 0 0 0 21 19V5"></path><path d="M3 12A9 3 0 0 0 21 12"></path></svg>,
+                brain: <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.54Z"></path><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-2.54Z"></path></svg>,
+                alert: <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>,
+                heart: <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>,
+                mic: <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v1a7 7 0 0 1-14 0v-1"></path><line x1="12" y1="18" x2="12" y2="22"></line><line x1="8" y1="22" x2="16" y2="22"></line></svg>,
+                volume: <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>,
+                stopCircle: <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><rect x="9" y="9" width="6" height="6"></rect></svg>
+            };
+            return icons[name] || null;
+        };
+
+        function App() {
+            const [query, setQuery] = useState("");
+            const [language, setLanguage] = useState("en");
+            const [loading, setLoading] = useState(false);
+            const [result, setResult] = useState(null);
+            const [error, setError] = useState("");
+            const [voiceError, setVoiceError] = useState("");
+            const [isListening, setIsListening] = useState(false);
+            const [isSpeaking, setIsSpeaking] = useState(false);
+            const [speechInputSupported, setSpeechInputSupported] = useState(true);
+            const [speechOutputSupported, setSpeechOutputSupported] = useState(true);
+            const recognitionRef = useRef(null);
+            const transcriptRef = useRef("");
+            const shouldSubmitRef = useRef(false);
+
+            const languages = [
+                { code: "en", name: "English" },
+                { code: "hi", name: "Hindi" },
+                { code: "te", name: "Telugu" },
+                { code: "mr", name: "Marathi" },
+                { code: "ta", name: "Tamil" },
+                { code: "kn", name: "Kannada" },
+                { code: "ml", name: "Malayalam" }
+            ];
+
+            const languageToLocale = {
+                en: "en-IN",
+                hi: "hi-IN",
+                te: "te-IN",
+                mr: "mr-IN",
+                ta: "ta-IN",
+                kn: "kn-IN",
+                ml: "ml-IN"
+            };
+
+            const getLocaleForLanguage = (langCode) => languageToLocale[langCode] || "en-IN";
+
+            const createSpokenSummary = (data) => {
+                if (!data) return "";
+                const parts = [];
+                if (data.dosha) parts.push(`Predominant dosha: ${data.dosha}.`);
+                if (data.remedy) parts.push(data.remedy);
+                if (data.remedies?.length) parts.push(`Natural remedies: ${data.remedies.slice(0, 3).join(". ")}`);
+                if (data.lifestyle?.length) parts.push(`Lifestyle guidance: ${data.lifestyle.slice(0, 2).join(". ")}`);
+                return parts.join(" ").trim();
+            };
+
+            const stopSpeaking = () => {
+                if (window.speechSynthesis) {
+                    window.speechSynthesis.cancel();
+                }
+                setIsSpeaking(false);
+            };
+
+            const speakResult = (data, langCode = language) => {
+                if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
+                    setVoiceError("Voice output is not supported in this browser.");
+                    return;
+                }
+
+                const speechText = createSpokenSummary(data);
+                if (!speechText) return;
+
+                stopSpeaking();
+                const utterance = new SpeechSynthesisUtterance(speechText);
+                utterance.lang = getLocaleForLanguage(langCode);
+
+                const voices = window.speechSynthesis.getVoices();
+                const langPrefix = utterance.lang.split("-")[0].toLowerCase();
+                const matchingVoice = voices.find((voice) => voice.lang?.toLowerCase().startsWith(langPrefix));
+                if (matchingVoice) utterance.voice = matchingVoice;
+
+                setVoiceError("");
+                utterance.onstart = () => setIsSpeaking(true);
+                utterance.onend = () => setIsSpeaking(false);
+                utterance.onerror = () => {
+                    setIsSpeaking(false);
+                    setVoiceError("Voice playback failed in this browser for the selected language.");
+                };
+
+                window.speechSynthesis.speak(utterance);
+            };
+
+            const runInference = async (textValue, langValue, options = {}) => {
+                const cleanedQuery = (textValue || "").trim();
+                if (!cleanedQuery) return;
+
+                setLoading(true);
+                setError("");
+                setVoiceError("");
+                setResult(null);
+
+                try {
+                    const response = await fetch(`${API_BASE}/infer`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ text: cleanedQuery, language: langValue })
+                    });
+
+                    if (!response.ok) throw new Error("Server error");
+                    const data = await response.json();
+                    setResult(data);
+                    if (options.autoSpeak) {
+                        speakResult(data, langValue);
+                    }
+                } catch (err) {
+                    setError("Communication with the local neural engine was interrupted. Ensure the backend is running on port 8005.");
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const stopListening = () => {
+                if (recognitionRef.current) {
+                    try {
+                        recognitionRef.current.stop();
+                    } catch (err) {
+                        // Keep UI stable if stop is called before recorder is fully active.
+                    }
+                }
+            };
+
+            const startListening = () => {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) {
+                    setSpeechInputSupported(false);
+                    setVoiceError("Voice input is not supported in this browser. Try latest Chrome or Edge.");
+                    return;
+                }
+                if (loading || isListening) return;
+
+                const recognition = new SpeechRecognition();
+                recognition.lang = getLocaleForLanguage(language);
+                recognition.continuous = false;
+                recognition.interimResults = true;
+                recognition.maxAlternatives = 1;
+
+                transcriptRef.current = "";
+                shouldSubmitRef.current = true;
+                recognitionRef.current = recognition;
+                setVoiceError("");
+                setError("");
+
+                recognition.onstart = () => setIsListening(true);
+                recognition.onresult = (event) => {
+                    let combined = "";
+                    for (let i = 0; i < event.results.length; i += 1) {
+                        combined += `${event.results[i][0]?.transcript || ""} `;
+                    }
+                    transcriptRef.current = combined.trim();
+                    if (transcriptRef.current) setQuery(transcriptRef.current);
+                };
+                recognition.onerror = (event) => {
+                    if (event.error === "aborted") {
+                        shouldSubmitRef.current = false;
+                        return;
+                    }
+                    setVoiceError(`Voice input error: ${event.error}. Please try again.`);
+                };
+                recognition.onend = () => {
+                    setIsListening(false);
+                    recognitionRef.current = null;
+                    const finalText = transcriptRef.current.trim();
+                    if (shouldSubmitRef.current && finalText) {
+                        runInference(finalText, language, { autoSpeak: true });
+                    }
+                };
+
+                recognition.start();
+            };
+
+            const handleVoiceButton = () => {
+                if (isListening) {
+                    stopListening();
+                    return;
+                }
+                startListening();
+            };
+
+            useEffect(() => {
+                setSpeechInputSupported(Boolean(window.SpeechRecognition || window.webkitSpeechRecognition));
+                setSpeechOutputSupported(Boolean(window.speechSynthesis && window.SpeechSynthesisUtterance));
+
+                return () => {
+                    stopSpeaking();
+                    if (recognitionRef.current) {
+                        try {
+                            recognitionRef.current.abort();
+                        } catch (err) {
+                            // Ignore cleanup errors.
+                        }
+                        recognitionRef.current = null;
+                    }
+                };
+            }, []);
+
+            const handleAnalyze = async (e) => {
+                e.preventDefault();
+                runInference(query, language);
+            };
+
+            return (
+                <div className="min-h-screen relative overflow-hidden">
+                    {/* Background Orbs */}
+                    <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-100 rounded-full blur-[120px] opacity-50 z-[-1]"></div>
+                    <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-amber-100 rounded-full blur-[120px] opacity-50 z-[-1]"></div>
+
+                    {/* Navigation */}
+                    <nav className="flex justify-between items-center px-8 py-6 glass sticky top-0 z-50">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-emerald-600 p-2 rounded-xl text-white">
+                                <Icon name="leaf" />
+                            </div>
+                            <span className="text-2xl font-bold text-emerald-900 tracking-tight">Vaidya SLM</span>
+                        </div>
+                        <div className="hidden md:flex gap-8 items-center text-sm font-semibold text-emerald-800">
+                            <a href="#" className="hover:text-emerald-500 transition-colors">Neural Engine</a>
+                            <a href="#" className="hover:text-emerald-500 transition-colors">Research</a>
+                            <a href="#" className="bg-emerald-900 text-white px-5 py-2.5 rounded-full hover:bg-emerald-800 transition-all shadow-lg shadow-emerald-900/20">Documentation</a>
+                        </div>
+                    </nav>
+
+                    {/* Hero Section */}
+                    <main className="max-w-7xl mx-auto px-8 py-16 grid lg:grid-cols-2 gap-16 items-center">
+                        <div className="space-y-8">
+                            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm font-bold shadow-sm">
+                                <Icon name="sparkles" className="w-4 h-4" />
+                                <span>FINE-TUNED GEMMA-2 INTELLIGENCE</span>
+                            </div>
+                            <h1 className="text-6xl md:text-7xl font-bold leading-[1.1] text-slate-900 tracking-tight">
+                                Ayurveda, <br />
+                                <span className="gradient-text">Reimagined.</span>
+                            </h1>
+                            <p className="text-xl text-slate-600 leading-relaxed max-w-xl">
+                                Experience the world's most advanced offline Ayurvedic diagnostic engine. 
+                                Vaidya SLM combines centuries of herbal wisdom with secure, local AI.
+                            </p>
+                            <div className="flex flex-wrap gap-6 text-sm font-semibold text-slate-500">
+                                <div className="flex items-center gap-2 text-emerald-600"><Icon name="shield" className="w-5 h-5" /> <span className="text-slate-500">Privacy Centric</span></div>
+                                <div className="flex items-center gap-2 text-emerald-600"><Icon name="zap" className="w-5 h-5" /> <span className="text-slate-500">Local Inference</span></div>
+                                <div className="flex items-center gap-2 text-emerald-600"><Icon name="database" className="w-5 h-5" /> <span className="text-slate-500">Specialized Model</span></div>
+                            </div>
+                        </div>
+
+                        <div className="relative">
+                            <div className="absolute inset-0 bg-emerald-600/10 rounded-3xl blur-3xl rotate-6"></div>
+                            <img src="https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=800" 
+                                 alt="Wellness" className="rounded-[40px] shadow-2xl relative z-10 animate-float" />
+                        </div>
+                    </main>
+
+                    {/* Diagnostic Area */}
+                    <section className="max-w-4xl mx-auto px-8 pb-32">
+                        <div className="diagnostic-card glass p-10 md:p-14 rounded-[48px] shadow-2xl">
+                            <div className="flex justify-between items-end mb-12">
+                                <div className="text-left">
+                                    <h2 className="text-3xl font-bold text-slate-900 mb-2">Start Consultation</h2>
+                                    <p className="text-slate-500 text-sm">Your data never leaves this machine.</p>
+                                </div>
+                                <div className="flex flex-col items-end gap-2">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Language</span>
+                                    <select 
+                                        value={language} 
+                                        onChange={(e) => setLanguage(e.target.value)}
+                                        className="bg-slate-50 border-2 border-slate-100 text-slate-700 text-sm font-bold rounded-2xl px-4 py-2.5 focus:ring-0 focus:border-emerald-500 outline-none cursor-pointer hover:bg-white transition-all shadow-sm"
+                                    >
+                                        {languages.map(lang => (
+                                            <option key={lang.code} value={lang.code}>{lang.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <form onSubmit={handleAnalyze} className="space-y-6">
+                                <div className="relative group">
+                                    <textarea 
+                                        className="w-full h-40 p-8 rounded-[32px] border-2 border-slate-100 focus:border-emerald-500 focus:ring-0 text-lg transition-all bg-white/50 group-hover:bg-white"
+                                        placeholder="Describe your symptoms... e.g., I have constant headaches and feeling of heat in the body."
+                                        value={query}
+                                        onChange={(e) => setQuery(e.target.value)}
+                                    ></textarea>
+                                </div>
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={handleVoiceButton}
+                                        disabled={!speechInputSupported || loading}
+                                        className={`inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold border transition-all disabled:opacity-50 ${
+                                            isListening
+                                                ? "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                                                : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                                        }`}
+                                    >
+                                        <Icon name={isListening ? "stopCircle" : "mic"} className="w-5 h-5" />
+                                        <span>{isListening ? "Stop Voice Capture" : "Speak Symptoms"}</span>
+                                    </button>
+                                    <span className="text-xs font-semibold text-slate-500">
+                                        {isListening
+                                            ? "Listening... speak now. We will auto-diagnose after capture."
+                                            : speechInputSupported
+                                                ? "Voice mode ready."
+                                                : "Voice mode not supported in this browser."}
+                                    </span>
+                                </div>
+                                <button 
+                                    disabled={loading || isListening}
+                                    className="w-full py-6 rounded-3xl bg-emerald-900 text-white text-xl font-bold flex items-center justify-center gap-3 hover:bg-emerald-800 transition-all hover:shadow-2xl hover:shadow-emerald-900/30 disabled:opacity-50"
+                                >
+                                    {loading ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                                            <span>Analyzing with Neural Engine...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Icon name="brain" />
+                                            <span>Begin Diagnosis</span>
+                                        </>
+                                    )}
+                                </button>
+                            </form>
+
+                            {error && (
+                                <div className="mt-8 p-6 bg-red-50 border border-red-100 rounded-3xl text-red-700 flex items-start gap-4">
+                                    <Icon name="alert" className="mt-1 w-6 h-6" />
+                                    <p className="font-medium">{error}</p>
+                                </div>
+                            )}
+                            {voiceError && (
+                                <div className="mt-5 p-5 bg-amber-50 border border-amber-100 rounded-3xl text-amber-800 flex items-start gap-4">
+                                    <Icon name="alert" className="mt-1 w-5 h-5" />
+                                    <p className="font-medium text-sm">{voiceError}</p>
+                                </div>
+                            )}
+
+                            {result && (
+                                <div className="mt-12 space-y-6">
+                                    <div className="p-8 rounded-[32px] bg-emerald-50 border border-emerald-100 flex items-center justify-between">
+                                        <div>
+                                            <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest block mb-1">Predominant Dosha</span>
+                                            <span className="text-3xl font-bold text-emerald-900">{result.dosha}</span>
+                                        </div>
+                                        <div className="bg-emerald-100 p-4 rounded-2xl text-emerald-700">
+                                            <Icon name="leaf" className="w-8 h-8" />
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="p-10 rounded-[40px] bg-white border-2 border-slate-100 shadow-xl shadow-slate-200/50">
+                                        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+                                            <div className="p-3 bg-amber-50 rounded-2xl text-amber-600">
+                                                <Icon name="sparkles" className="w-8 h-8" />
+                                            </div>
+                                            <div>
+                                                <span className="text-[10px] font-black text-amber-600 uppercase tracking-[0.2em] block mb-0.5">Vaidya AI Inference</span>
+                                                <h3 className="text-2xl font-bold text-slate-900 leading-tight">Personalized Guidance</h3>
+                                            </div>
+                                            <div className="ml-auto flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => speakResult(result, language)}
+                                                    disabled={isSpeaking || !speechOutputSupported}
+                                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold disabled:opacity-50"
+                                                >
+                                                    <Icon name="volume" className="w-4 h-4" />
+                                                    <span>{isSpeaking ? "Speaking..." : "Play Voice"}</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={stopSpeaking}
+                                                    disabled={!isSpeaking}
+                                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold disabled:opacity-50"
+                                                >
+                                                    <Icon name="stopCircle" className="w-4 h-4" />
+                                                    <span>Stop</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="text-slate-700 leading-relaxed whitespace-pre-line text-lg mb-12 py-6 px-8 bg-slate-50 rounded-3xl border border-slate-100 italic">
+                                            "{result.remedy}"
+                                        </div>
+
+                                        <div className="grid md:grid-cols-2 gap-12">
+                                            <div className="space-y-6">
+                                                <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+                                                    <Icon name="heart" className="text-emerald-500 w-5 h-5" />
+                                                    <h4 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Natural Remedies</h4>
+                                                </div>
+                                                <ul className="space-y-4">
+                                                    {result.remedies?.slice(0, 6).map((item, idx) => (
+                                                        <li key={idx} className="flex gap-3 text-slate-600 text-[15px] group">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-2 shrink-0 group-hover:scale-125 transition-transform" />
+                                                            <span>{item}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                            
+                                            <div className="space-y-6">
+                                                <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+                                                    <Icon name="leaf" className="text-amber-500 w-5 h-5" />
+                                                    <h4 className="text-sm font-bold text-slate-800 uppercase tracking-widest">Lifestyle & Diet</h4>
+                                                </div>
+                                                <ul className="space-y-4">
+                                                    {result.lifestyle?.slice(0, 3).map((item, idx) => (
+                                                        <li key={idx} className="flex gap-3 text-slate-600 text-[15px] group">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-2 shrink-0 group-hover:scale-125 transition-transform" />
+                                                            <span>{item}</span>
+                                                        </li>
+                                                    ))}
+                                                    {result.dietary?.slice(0, 3).map((item, idx) => (
+                                                        <li key={idx} className="flex gap-3 text-slate-600 text-[15px] group">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-slate-300 mt-2 shrink-0 group-hover:scale-125 transition-transform" />
+                                                            <span>{item}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="mt-12 pt-8 border-t border-slate-100 flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                                            <span>Ayurvedic Intelligence v1.0</span>
+                                            <span className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                                                Gemma-2-2b Loaded
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </section>
+
+                    <footer className="py-12 text-center text-slate-400 text-sm border-t border-slate-100">
+                        <p>Â© 2026 Vaidya SLM Laboratory. Encrypted & Offline.</p>
+                    </footer>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
+
