@@ -7,7 +7,7 @@ A speech-enabled AI system for Ayurvedic medicine consultation with multilingual
 - **LLM Inference**: Gemma 2 2B quantized model for Ayurvedic medicine
 - **RAG System**: 446-chunk knowledge base with hybrid similarity scoring
 - **Text-to-Speech**: gTTS with 10+ language support (Hindi, Telugu, Tamil, etc.)
-- **Speech-to-Text**: Mock ASR (planned: Whisper + IndicASR)
+- **Speech-to-Text**: Mock ASR
 - **Multilingual**: Support for Indian and English languages
 - **Translation**: Automatic translation between languages
 
@@ -47,7 +47,7 @@ python -m uvicorn main:app --host 0.0.0.0 --port 8005
 
 - `POST /infer` - Get Ayurvedic diagnosis and remedies
 - `POST /tts` - Convert text to speech
-- `POST /asr` - Convert speech to text (mock)
+- `POST /asr` - Convert speech to text
 - `POST /detect-language` - Detect input language
 
 ## Knowledge Base
@@ -62,6 +62,6 @@ python -m uvicorn main:app --host 0.0.0.0 --port 8005
 - ✓ LLM Inference (Gemma 2)
 - ✓ RAG Integration (446 chunks)
 - ✓ Text-to-Speech (gTTS)
-- 🔄 Speech-to-Text (Mock - planned real implementation)
+- ✓ Speech to Text
 - ✓ Translation
 - ✓ Multilingual Support
